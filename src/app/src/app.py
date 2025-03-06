@@ -63,6 +63,23 @@ async def get_email(email_id: int):
     else:
         raise HTTPException(status_code=404, detail="Email not found")
 
+@app.get('/dept')
+def dept():
+    a = [ 
+        { "deptno": "10", "dname": "ACCOUNTING", "loc": "Seoul"},
+        { "deptno": "20", "dname": "RESEARCH", "loc": "Cape Town"},
+        { "deptno": "30", "dname": "SALES", "loc": "Brussels"},
+        { "deptno": "40", "dname": "OPERATIONS", "loc": "San Francisco"}
+    ]  
+    print(a, flush=True)     
+    response = jsonify(a)
+    response.status_code = 200
+    return response  
+
+@app.get('/info')
+def info():
+        return "Python - Flask - No Database" 
+
 # Example usage (run with uvicorn):
 # uvicorn main:app --reload
 # Then go to:
