@@ -2,8 +2,9 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
 
+
+
 export DB_USER="##DB_USER##"
 export DB_PASSWORD="##DB_PASSWORD##"
 export DB_URL="##DB_URL##"
-source myenv/bin/activate
-uvicorn app:app --host 0.0.0.0 --port 8080 2>&1 | tee app.log
+node rest.js > app.log 2>&1 
