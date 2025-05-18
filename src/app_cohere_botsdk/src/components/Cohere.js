@@ -30,38 +30,29 @@ handlers: {
         let history = event.payload.messages.slice(1).reduce((acc, cur) => `${acc}\n${cur.role}: ${cur.content}`, '');
         prompt += `\n\nCONVERSATION HISTORY:${history}\nassistant:`
       }
-      
-      let modelId = "meta.llama-3.3-70b-instruct"
-      let apiFormat = "GENERIC";
+    
       return {
         "compartmentId": event.compartmentId,
         "servingMode": {
-          "servingType": "ON_DEMAND",
-          "modelId": modelId
+            "modelId": "cohere.command-a-03-2025",
+            "servingType": "ON_DEMAND"
         },
         "chatRequest": {
-          "messages": [
-              {
-                  "role": "USER",
-                  "content": [
-                      {
-                          "type": "TEXT",
-                          "text": prompt
-                      }
-                  ]
-              }
-          ],
-          "apiFormat": apiFormat,
-          "maxTokens": 4000,
-          "isStream": streamResVar,
-          "numGenerations": 1,
-          "frequencyPenalty": 0,
-          "presencePenalty": 0,
-          "temperature": 0,
-          "topP": 1,
-          "topK": 1
+            "maxTokens": 600,
+            "temperature": 0,
+            "preambleOverride": null,
+            "frequencyPenalty": 0,
+            "presencePenalty": 0,
+            "frequencyPenalty": 0,
+            "topP": 0.75,
+            "topK": 0,
+            "isStream": streamResVar,
+            "chatHistory": [
+                { "message": prompt }
+            ],
+            "apiFormat": "COHERE"
         }
-      };
+      }      
     },
 
     /**

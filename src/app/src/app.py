@@ -1,10 +1,46 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Annotated
+from langchain_community.tools.tavily_search import TavilySearchResults
 import logging
 
 app = FastAPI()
 logging.basicConfig( format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
+
+#----------------------------------------------------------------------------
+
+security = HTTPBasic()
+
+def get_current_username(
+    credentials: Annotated[HTTPBasicCredentials, Depends(security)],
+):
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = b"test"
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = b"test"
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
+
+@app.get("/users/me")
+def read_current_user(username: Annotated[str, Depends(get_current_username)]):
+    return {"username": username}
+
+app = FastAPI(dependencies=[Depends(get_current_username())])
+
+#----------------------------------------------------------------------------
 
 class Email(BaseModel):
     id: int
@@ -22,7 +58,7 @@ fixed_emails = [
         "title": "Meeting Reminder: Project X",
         "sender": "meeting@example.com",
         "date": today + " 09:34:00",
-        "content": "Don't forget our meeting at 10 AM next tuesday to discuss Project X. We meet in our Dubai office."
+        "content": "Don't forget our meeting at 14AM " + today + " to discuss Project X. We meet in our Dubai office."
     },
     {
         "id": "2",
@@ -53,6 +89,7 @@ fixed_emails = [
         "content": "Thank you for subscribing to our newsletter."
     },
 ]
+#----------------------------------------------------------------------------
 
 @app.get("/email", response_model=list[Email])
 async def list_email(number: int = 1):
@@ -63,6 +100,8 @@ async def list_email(number: int = 1):
         email = Email(id=email_dict["id"],title=email_dict["title"], sender=email_dict["sender"], date=email_dict["date"], content=email_dict["content"])
         emails.append(email)
     return emails
+
+#----------------------------------------------------------------------------
 
 @app.get("/email/{id}", response_model=Email)
 async def get_email(id: int):
@@ -75,6 +114,7 @@ async def get_email(id: int):
     else:
         raise HTTPException(status_code=404, detail="Email not found")
 
+#----------------------------------------------------------------------------
 
 @app.get("/hr_policy")
 async def hr_policy(email: str):
@@ -91,6 +131,8 @@ async def hr_policy(email: str):
     else:
         return(f"No policy found for {email}")
 
+#----------------------------------------------------------------------------
+
 @app.get("/calc")
 def calc(operation: str):
     """
@@ -103,10 +145,15 @@ def calc(operation: str):
         The result of the expression.
     """
     try:
+        for char in str:
+            if char.isalpha():
+                return 'Non numerical input'
         result = eval(operation)
-        return str(result)  # Ensure the result is a float
+        return result  # Ensure the result is a float
     except (SyntaxError, TypeError, NameError, ZeroDivisionError) as e:
         return (f"Error evaluating expression: {e}")
+
+#----------------------------------------------------------------------------
 
 @app.get('/dept')
 def dept():
@@ -118,9 +165,18 @@ def dept():
     ]  
     return a  
 
+#----------------------------------------------------------------------------
+
+@app.get('/tavilySearch')
+def tavilySearch(question: str):
+    ## need to set ("TAVILY_API_KEY")
+    tavily_search = TavilySearchResults(max_results=3)
+    search_docs = tavily_search.invoke(question)
+    return search_docs
+
 @app.get('/info')
 def info():
-        return "Python - FastAPI - No Database" 
+    return "Python - FastAPI - No Database" 
 
 # curl http://localhost:8080/hr_policy?email=joe.doe@example.com
 # curl http://localhost:8080/calc?operation=5*5

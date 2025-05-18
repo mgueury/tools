@@ -9,8 +9,3 @@ sudo dnf module install -y nodejs
 
 npm install
 
-sudo firewall-cmd --zone=public --add-port=3000/tcp --permanent
-sudo firewall-cmd --reload
-
-# In ODA, the URL is 
-# http://##COMPUTE_IP##:3000/components

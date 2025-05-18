@@ -9,6 +9,7 @@ export TF_VAR_deploy_type="public_compute"
 export TF_VAR_language="python"
 
 export TF_VAR_compartment_ocid="__TO_FILL__"
+export TAVILY_API_KEY="__TO_FILL__"
 
 if [ -f $HOME/.oci_starter_profile ]; then
   . $HOME/.oci_starter_profile
