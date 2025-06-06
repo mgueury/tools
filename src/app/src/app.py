@@ -1,9 +1,10 @@
+import secrets
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Annotated
-from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_tavily import TavilySearch
 import logging
 
 app = FastAPI()
@@ -38,7 +39,7 @@ def get_current_username(
 def read_current_user(username: Annotated[str, Depends(get_current_username)]):
     return {"username": username}
 
-app = FastAPI(dependencies=[Depends(get_current_username())])
+# app = FastAPI(dependencies=[Depends(get_current_username())])
 
 #----------------------------------------------------------------------------
 
@@ -145,7 +146,7 @@ def calc(operation: str):
         The result of the expression.
     """
     try:
-        for char in str:
+        for char in operation:
             if char.isalpha():
                 return 'Non numerical input'
         result = eval(operation)
@@ -170,8 +171,8 @@ def dept():
 @app.get('/tavilySearch')
 def tavilySearch(question: str):
     ## need to set ("TAVILY_API_KEY")
-    tavily_search = TavilySearchResults(max_results=3)
-    search_docs = tavily_search.invoke(question)
+    tool = TavilySearch(max_results=3)
+    search_docs = tool.invoke(question)
     return search_docs
 
 @app.get('/info')

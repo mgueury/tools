@@ -9,7 +9,7 @@
 
 module.exports = {
   metadata: {
-    name: 'Llama',
+    name: 'Cohere',
     eventHandlerType: 'LlmTransformation'
   },
 handlers: {
@@ -38,7 +38,7 @@ handlers: {
             "servingType": "ON_DEMAND"
         },
         "chatRequest": {
-            "maxTokens": 600,
+            "maxTokens": 4000,
             "temperature": 0,
             "preambleOverride": null,
             "frequencyPenalty": 0,
@@ -47,9 +47,7 @@ handlers: {
             "topP": 0.75,
             "topK": 0,
             "isStream": streamResVar,
-            "chatHistory": [
-                { "message": prompt }
-            ],
+            "message": prompt, 
             "apiFormat": "COHERE"
         }
       }      
@@ -82,13 +80,7 @@ handlers: {
           }         
         });
       } else {
-        //let c = event.payload.chatResponse.choices;
-        event.payload.chatResponse.choices.forEach(item => {
-          let msgcontent = item.message.content[0];
-          let text = msgcontent.text;
-          llmPayload.candidates = [{ "content" : text || "" }];
-         });
-   
+        llmPayload.candidates = [{ "content" :  event.payload.chatResponse.text }];  
       }
       
       return llmPayload;
