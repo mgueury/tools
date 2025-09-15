@@ -61,6 +61,9 @@ handlers: {
     * @returns {object} the transformed response payload
     */
     transformResponsePayload: async (event, context) => {
+      console.log("<transformResponsePayload>")
+      console.log( JSON.stringify(event) )
+
       let llmPayload = {};
       if (event.payload.responseItems) {
         // streaming case
@@ -71,8 +74,7 @@ handlers: {
           
           let finshReasonVar = item.finishReason;
           if (finshReasonVar != 'stop') {
-              let msgcontent = item.message.content[0];
-              let text = msgcontent.text;
+              let text = item.text;
               if (text !== "") {
                  // check for only the stream items and not the 'complete' message (e.g. the last message returned by the API)
                 llmPayload.responseItems.push({ "candidates": [{ "content" : text || "" }] });
