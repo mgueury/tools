@@ -61,8 +61,8 @@ handlers: {
     * @returns {object} the transformed response payload
     */
     transformResponsePayload: async (event, context) => {
-      console.log("<transformResponsePayload>")
-      console.log( JSON.stringify(event) )
+      // console.log("<transformResponsePayload>")
+      // console.log( JSON.stringify(event) )
 
       let llmPayload = {};
       if (event.payload.responseItems) {
