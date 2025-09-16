@@ -72,8 +72,8 @@ handlers: {
         event.payload.responseItems.forEach(item => {     
           // only grab the text items, since last item in the responseItems[] is the finished reason not part of the sentence 
           
-          let finshReasonVar = item.finishReason;
-          if (finshReasonVar != 'stop') {
+          let finishReasonVar = item.finishReason;
+          if (finishReasonVar != 'stop') {
               let text = item.text;
               if (text !== "") {
                  // check for only the stream items and not the 'complete' message (e.g. the last message returned by the API)
