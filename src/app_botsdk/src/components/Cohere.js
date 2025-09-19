@@ -73,7 +73,10 @@ handlers: {
           // only grab the text items, since last item in the responseItems[] is the finished reason not part of the sentence 
           
           let finishReasonVar = item.finishReason;
-          if (finishReasonVar != 'stop') {
+          console.log( "finishReasonVar="+finishReasonVar )
+          if (finishReasonVar != 'COMPLETE') {
+              console.log( "---- ITEM -----" )
+              console.log( JSON.stringify(item) )
               let text = item.text;
               if (text !== "") {
                  // check for only the stream items and not the 'complete' message (e.g. the last message returned by the API)
@@ -84,9 +87,29 @@ handlers: {
       } else {
         llmPayload.candidates = [{ "content" :  event.payload.chatResponse.text }];  
       }
-      
+      console.log( JSON.stringify(llmPayload) )
       return llmPayload;
     },
+
+/*
+               let msgcontent = item.message.content[0];
+              let text = msgcontent.text;
+              if (text !== "") {
+                 // check for only the stream items and not the 'complete' message (e.g. the last message returned by the API)
+                llmPayload.responseItems.push({ "candidates": [{ "content" : text || "" }] });
+              }         
+          }         
+        });
+      } else {
+        //let c = event.payload.chatResponse.choices;
+        event.payload.chatResponse.choices.forEach(item => {
+          let msgcontent = item.message.content[0];
+          let text = msgcontent.text;
+          llmPayload.candidates = [{ "content" : text || "" }];
+         });
+      }
+    },
+*/
 
     /**
     * Handler to transform the error response payload, invoked when HTTP status code is 400 or higher and the error
