@@ -1,4 +1,5 @@
 'use strict';
+const MCPClient = require('../mcp/oci_mcp_client_lib.js');
 
 // Documentation for writing LLM Transformation handlers: https://github.com/oracle/bots-node-sdk/blob/master/LLM_TRANSFORMATION_HANDLER.md
 
