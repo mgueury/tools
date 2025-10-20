@@ -1,10 +1,11 @@
 'use strict';
-const MCPClient = require('./mcp/oci_mcp_client_lib.js');
+const MCPClient = require('../mcp/oci_mcp_client_lib.js');
 
 module.exports = {
   metadata: () => ({
-    name: 'mcpGetTools',
+    name: 'MCP_call_tool',
     properties: {
+      tool: { required: true, type: 'object' },
       mcpPath: { required: true, type: 'string' },
       outputVariableName: {required: true, type: 'string'},      
     },
@@ -14,6 +15,7 @@ module.exports = {
   invoke: async (conversation, done) => {
     var logger = conversation.logger();
     // perform conversation tasks.
+    const { tool } = conversation.properties();    
     const { mcpPath } = conversation.properties();
     const { outputVariableName } = conversation.properties();
 
@@ -21,8 +23,8 @@ module.exports = {
       const mcpClient = new MCPClient();
       // await mcpClient.connectToServer("/home/opc/oci-mcp-quickstart/python-fastmcp/mcp_add.py");
       await mcpClient.connectToServer(mcpPath);
-      tools = await mcpClient.getTools();
-      conversation.variable(outputVariableName, tools);
+      result = await mcpClient.callTool(tool);
+      conversation.variable(outputVariableName, result);
       conversation.transition('success');    
     } catch(err) {
       debug( err.message );
