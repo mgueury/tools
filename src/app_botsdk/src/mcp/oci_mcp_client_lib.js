@@ -16,7 +16,7 @@ class MCPClient {
         this.llm = null;
         this.transport = null;
         this.toolsCohere = [];
-        this.toolsMCP = [];
+        this.toolsMCP = null;
     }
 
     debug(s) {
@@ -60,7 +60,16 @@ class MCPClient {
         await new Promise(r => setTimeout(r, 2000));
     }
 
-    getToolCohere() {
+    addToolsLocal( toolsLocal ) {
+        toolsLocal.tools.map((tool) => {
+            tool.name = "local_" + tool.name;
+            this.toolsMCP.push( tool );
+        });
+        this.debug("this.toolsMCP: " + JSON.stringify(this.toolsMCP));
+        this.getToolsCohere();
+    }
+
+    getToolsCohere() {
         this.toolsCohere = this.toolsMCP.tools.map((tool) => {
             this.debug("tool.inputSchema: " + JSON.stringify(tool.inputSchema));
             var tool_schema = tool.inputSchema.properties;
@@ -87,7 +96,7 @@ class MCPClient {
         });
         this.debug("this.toolsCohere: " + JSON.stringify(this.toolsCohere));
         console.log(
-            "Connected to server with toolsMCP:",
+            "Connected to server with tools:",
             this.toolsCohere.map(({ name }) => name),
         );
     }
@@ -95,6 +104,7 @@ class MCPClient {
     async getToolsMCP() {
         this.toolsMCP = await this.mcp.listTools();
         this.debug("this.toolsMCP " + JSON.stringify(this.toolsMCP));
+        this.getToolsCohere();
     }
 
     async callTool(tool) {
@@ -139,6 +149,9 @@ class MCPClient {
         if (chatResponse.toolCalls) {
             for (const toolCall of chatResponse.toolCalls) {
                 this.debug(toolCall);
+                if( toolCall.name.startsWith("local_") ) {
+                    return [ "local", JSON.stringify(toolCall) ];
+                } 
                 finalText.push(
                     `[Calling tool ${toolCall.name} with args ${JSON.stringify(toolCall.parameters)}]`,
                 );
@@ -153,8 +166,7 @@ class MCPClient {
                 });
             }
         }
-
-        return finalText.join("\n");
+        return [ "mcp", finalText.join("\n") ];
     }
 
     async chatLoop() {
@@ -173,7 +185,7 @@ class MCPClient {
                     break;
                 }
                 console.log("\n" + message);
-                const response = await this.processQuery(message);
+                const [res_type, response] = await this.processQuery(message);
                 console.log("\n" + response);
             }
         } catch (e) {
@@ -197,7 +209,6 @@ class MCPClient {
             await this.initLLM();
             await this.connectToServer(process.argv[2]);
             await this.getToolsMCP();
-            this.getToolCohere();
             await this.chatLoop();
         } catch( e ) {
             console.log( "Exception: " + e );

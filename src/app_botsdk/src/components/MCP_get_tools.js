@@ -23,10 +23,10 @@ module.exports = {
     try {
       // await mcpClient.connectToServer("/home/opc/oci-mcp-quickstart/python-fastmcp/mcp_add.py");
       await mcpClient.connectToServer(mcpPath);
-      await mcpClient.getTools();
-      conversation.variable(outputVariableName, mcpClient.toolsMCP);
+      await mcpClient.getToolsMCP();
+      conversation.variable(outputVariableName, mcpClient.toolsMCP.tools);
       conversation.transition('success');    
-      console.log( "tools="+mcpClient.tools );
+      console.log( "tools="+ JSON.stringify(mcpClient.toolsMCP.tools));
     } catch(err) {
       console.log( err.message );
       conversation.transition('failure');
