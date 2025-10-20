@@ -24,7 +24,7 @@ handlers: {
     transformRequestPayload: async (event, context) => {
       // Cohere doesn't support chat completions, so we first print the system prompt, and if there
       // are additional chat entries, we add these to the system prompt under the heading CONVERSATION HISTORY
-      console.log( JSON.stringify(event) );          
+      console.log( "event: " + JSON.stringify(event) );          
 
       let prompt = event.payload.messages[0].content;
       let streamResVar = event.payload.streamResponse;

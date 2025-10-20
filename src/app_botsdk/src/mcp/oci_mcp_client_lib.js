@@ -15,7 +15,8 @@ class MCPClient {
         this.mcp = new mcp_client.Client({ name: "mcp-client-cli", version: "1.0.0" });
         this.llm = null;
         this.transport = null;
-        this.tools = [];
+        this.toolsCohere = [];
+        this.toolsMCP = [];
     }
 
     debug(s) {
@@ -59,11 +60,8 @@ class MCPClient {
         await new Promise(r => setTimeout(r, 2000));
     }
 
-    async getTools() {
-        const toolsResult = await this.mcp.listTools();
-
-        this.debug("toolsResult " + JSON.stringify(toolsResult));
-        this.tools = toolsResult.tools.map((tool) => {
+    getToolCohere() {
+        this.toolsCohere = this.toolsMCP.tools.map((tool) => {
             this.debug("tool.inputSchema: " + JSON.stringify(tool.inputSchema));
             var tool_schema = tool.inputSchema.properties;
             this.debug("tool_schema: " + JSON.stringify(tool_schema));
@@ -75,18 +73,28 @@ class MCPClient {
                     isRequired: false
                 }
             });
-            this.debug("tool.inputSchema " + JSON.stringify(params));
+            // Required
+            this.debug("tool.inputSchema.required: " + JSON.stringify(tool.inputSchema.required));
+            tool.inputSchema.required.forEach( function (key, index) {
+                params[key].isRequired = true;
+            });
+            this.debug("params: " + JSON.stringify(params));
             return {
                 name: tool.name,
                 description: tool.description,
                 parameterDefinitions: params,
             };
         });
-        this.debug("this.tools: " + JSON.stringify(this.tools));
+        this.debug("this.toolsCohere: " + JSON.stringify(this.toolsCohere));
         console.log(
-            "Connected to server with tools:",
-            this.tools.map(({ name }) => name),
+            "Connected to server with toolsMCP:",
+            this.toolsCohere.map(({ name }) => name),
         );
+    }
+
+    async getToolsMCP() {
+        this.toolsMCP = await this.mcp.listTools();
+        this.debug("this.toolsMCP " + JSON.stringify(this.toolsMCP));
     }
 
     async callTool(tool) {
@@ -108,7 +116,7 @@ class MCPClient {
                     apiFormat: "COHERE",
                     maxTokens: 2000,
                     temperature: 0,
-                    tools: this.tools,
+                    tools: this.toolsCohere,
                 }
             },
             retryConfiguration: oci_common.NoRetryConfigurationDetails
@@ -188,8 +196,12 @@ class MCPClient {
         try {
             await this.initLLM();
             await this.connectToServer(process.argv[2]);
-            await this.getTools();
+            await this.getToolsMCP();
+            this.getToolCohere();
             await this.chatLoop();
+        } catch( e ) {
+            console.log( "Exception: " + e );
+            console.log( e.stack );
         } finally {
             await this.cleanup();
             process.exit(0);
