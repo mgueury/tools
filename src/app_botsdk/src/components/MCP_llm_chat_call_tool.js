@@ -3,7 +3,7 @@ const MCPClient = require('../mcp/oci_mcp_client_lib.js');
 
 module.exports = {
     metadata: () => ({
-        name: 'MCP_call_tool',
+        name: 'MCP_llm_chat_call_tool',
         properties: {
             prompt: { required: true, type: 'string' },
             toolsMCP: { required: true, type: 'string' },
@@ -16,17 +16,26 @@ module.exports = {
     invoke: async (conversation, done) => {
         var logger = conversation.logger();
         // perform conversation tasks.
-        const { tool } = conversation.properties();
+        const { prompt } = conversation.properties();
+        const { toolsMCP } = conversation.properties();
+        const { toolsLocal } = conversation.properties();
         const { config } = conversation.properties();
-        const mcpClient = new MCPClient();
+        let jConfig = JSON.parse(config);
+
+        const mcpClient = new MCPClient(jConfig);
         try {
-            let jConfig = JSON.parse(config);
             // await mcpClient.connectToServer("/home/opc/oci-mcp-quickstart/python-fastmcp/mcp_add.py");
+            mcpClient.config = jConfig
             await mcpClient.initLLM();
             await mcpClient.connectToServer(jConfig.mcpPath);
-            const result = await mcpClient.callTool( JSON.parse(tool) );
+            mcpClient.toolsMCP = { "tools": JSON.parse(toolsMCP) };
+            if (toolsLocal) {
+                console.log("toolsLocal: " + toolsLocal);
+                mcpClient.addToolsLocal2ToolsMCP(JSON.parse(toolsLocal));
+            }
+            const [res_type, result] = await mcpClient.LlmChatCallTool(prompt);
             conversation.variable(jConfig.outputVariableName, result);
-            conversation.transition('success');
+            conversation.transition(res_type);
         } catch (err) {
             console.log("Exception: " + err.stack);
             console.log(err.message);

@@ -5,18 +5,24 @@ const stdio = require("@modelcontextprotocol/sdk/client/stdio.js");
 const streamableHttp = require("@modelcontextprotocol/sdk/client/streamableHttp.js");
 const readline = require("readline/promises");
 
-const servingMode = {
-    modelId: process.env.TF_VAR_genai_cohere_model,
-    servingType: "ON_DEMAND",
-};
-
 class MCPClient {
     constructor() {
-        this.mcp = new mcp_client.Client({ name: "mcp-client-cli", version: "1.0.0" });
+        this.mcp = null;
         this.llm = null;
         this.transport = null;
         this.toolsCohere = [];
         this.toolsMCP = null;
+
+        this.config = {
+            "region": process.env.TF_VAR_region,
+            "compartment_ocid": process.env.TF_VAR_compartment_ocid,
+            "servingMode": {
+                "modelId": process.env.TF_VAR_genai_cohere_model,
+                "servingType": "ON_DEMAND"
+            },
+            // "mcpPath": "/home/opc/oci-mcp-quickstart/python-fastmcp/mcp_add.py",
+            // "outputVariableName": "skill.llmResp"
+        }
     }
 
     debug(s) {
@@ -28,10 +34,11 @@ class MCPClient {
         this.llm = new oci_genai.GenerativeAiInferenceClient({
             authenticationDetailsProvider: provider,
         });
-        this.llm.endpoint = "https://inference.generativeai." + process.env.TF_VAR_region + ".oci.oraclecloud.com";
+        this.llm.endpoint = "https://inference.generativeai." + this.config.region + ".oci.oraclecloud.com";
     }
 
     async connectToServer(serverPath) {
+        this.mcp = new mcp_client.Client({ name: "mcp-client-cli", version: "1.0.0" });
         if (serverPath.startsWith('http')) {
             this.debug("streamableHTTP");
             const url = new URL(serverPath);
@@ -54,22 +61,35 @@ class MCPClient {
                 command,
                 args: [serverPath],
             });
+            this.debug("this.transport: " + JSON.stringify(this.transport));
             await this.mcp.connect(this.transport);
         }
-        this.debug("before ListTools");
         await new Promise(r => setTimeout(r, 2000));
     }
 
-    addToolsLocal( toolsLocal ) {
-        toolsLocal.tools.map((tool) => {
+    addToolsLocal2ToolsMCP( toolsLocal ) {
+        toolsLocal.map((tool) => {
             tool.name = "local_" + tool.name;
             this.toolsMCP.push( tool );
         });
         this.debug("this.toolsMCP: " + JSON.stringify(this.toolsMCP));
-        this.getToolsCohere();
+        this.convertToolsMCP2Cohere();
     }
 
-    getToolsCohere() {
+    addOdaTool2Cohere( tool ) {
+        var t = {};
+        t.name = "local_" + tool.name; 
+        if ( tool.description ) {
+          t.description = tool.description; 
+        }
+        if ( tool.parameters ) {
+          t.parameterDefinitions = tool.parameters;
+        }
+        this.toolsCohere.push( t );
+        this.debug("this.toolsCohere: " + JSON.stringify(this.toolsCohere));
+    }
+
+    convertToolsMCP2Cohere() {
         this.toolsCohere = this.toolsMCP.tools.map((tool) => {
             this.debug("tool.inputSchema: " + JSON.stringify(tool.inputSchema));
             var tool_schema = tool.inputSchema.properties;
@@ -101,10 +121,10 @@ class MCPClient {
         );
     }
 
-    async getToolsMCP() {
+    async listTools() {
         this.toolsMCP = await this.mcp.listTools();
         this.debug("this.toolsMCP " + JSON.stringify(this.toolsMCP));
-        this.getToolsCohere();
+        this.convertToolsMCP2Cohere();
     }
 
     async callTool(tool) {
@@ -116,11 +136,11 @@ class MCPClient {
         return result;
     }
 
-    async processQuery(query) {
+    async LlmChatCallTool(query) {
         const chatRequest = {
             chatDetails: {
-                compartmentId: process.env.TF_VAR_compartment_ocid,
-                servingMode: servingMode,
+                compartmentId: this.config.compartment_ocid,
+                servingMode: this.config.servingMode,
                 chatRequest: {
                     message: query,
                     apiFormat: "COHERE",
@@ -185,7 +205,7 @@ class MCPClient {
                     break;
                 }
                 console.log("\n" + message);
-                const [res_type, response] = await this.processQuery(message);
+                const [res_type, response] = await this.LlmChatCallTool(message);
                 console.log("\n" + response);
             }
         } catch (e) {
@@ -197,7 +217,9 @@ class MCPClient {
     }
 
     async cleanup() {
-        await this.mcp.close();
+        if( this.mcp ) {
+            await this.mcp.close();
+        }
     }
 
     async main() {
@@ -208,7 +230,7 @@ class MCPClient {
         try {
             await this.initLLM();
             await this.connectToServer(process.argv[2]);
-            await this.getToolsMCP();
+            await this.listTools();
             await this.chatLoop();
         } catch( e ) {
             console.log( "Exception: " + e );
@@ -221,3 +243,88 @@ class MCPClient {
 }
 
 module.exports = MCPClient;
+
+/*
+ODA Tools Format
+----------------
+[
+  { 
+    "name": "mcp",
+    "description": "/home/opc/oci-mcp-quickstart/python-fastmcp/mcp_add.py",
+    "parameters" : {
+       "cache": true 
+    }
+  },
+  { "name": "hello",
+    "description": "answer to hello, hi"
+  },
+  { "name": "weather",
+    "description": "get the weather in a city and the cloth recommendation",
+    "parameters" : {
+       "city":{"description": "name of the city", "type": "string", "isRequired":true }
+    }
+  }
+]
+
+MCP Tools Format
+----------------
+{
+    "tools": [
+        {
+            "name": "add",
+            "description": "Add two numbers",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "a": {
+                        "type": "integer"
+                    },
+                    "b": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "a",
+                    "b"
+                ]
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "result": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "result"
+                ],
+                "x-fastmcp-wrap-result": true
+            },
+            "_meta": {
+                "_fastmcp": {
+                    "tags": []
+                }
+            }
+        }
+    ]
+}
+
+Cohere Tools Format
+-------------------
+[
+    {
+        "name": "add",
+        "description": "Add two numbers",
+        "parameterDefinitions": {
+            "a": {
+                "type": "integer",
+                "isRequired": true
+            },
+            "b": {
+                "type": "integer",
+                "isRequired": true
+            }
+        }
+    }
+]
+*/
