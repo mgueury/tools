@@ -1,7 +1,7 @@
 {
-  "name": "custom-component-service",
+  "name": "LLM",
   "version": "1.0.0",
-  "description": "Oracle Digital Assistant Component Package",
+  "description": "ODA - LLM and MCP Custom Components",
   "main": "main.js",
   "scripts": {
     "bots-node-sdk": "bots-node-sdk",
@@ -22,3 +22,4 @@
   },
   "bundleDependencies": []
 }
+

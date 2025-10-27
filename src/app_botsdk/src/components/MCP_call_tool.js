@@ -5,9 +5,7 @@ module.exports = {
     metadata: () => ({
         name: 'MCP_call_tool',
         properties: {
-            prompt: { required: true, type: 'string' },
-            toolsMCP: { required: true, type: 'string' },
-            toolsLocal: { required: false, type: 'string' },
+            tool: { required: true, type: 'string' },
             config: { required: true, type: 'string' }
         },
         supportedActions: []

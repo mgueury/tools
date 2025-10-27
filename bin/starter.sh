@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Set project_dir and bin_dir when not called from starter.sh
 if [ "$PROJECT_DIR" == "" ]; then
@@ -16,6 +16,7 @@ fi
 export TARGET_DIR=$PROJECT_DIR/target
 mkdir -p $TARGET_DIR/logs
 DATE_POSTFIX=`date '+%Y%m%d-%H%M%S'`
+set -o pipefail
 
 export ARG1=$1
 export ARG2=$2
@@ -27,7 +28,7 @@ if [ -z $ARG1 ]; then
     rm $COMMAND_FILE
   fi
   if [ ! -f $COMMAND_FILE ]; then
-    python $BIN_DIR/starter_menu.py 
+    python3 $BIN_DIR/starter_menu.py 
     if [ -f $COMMAND_FILE ]; then
       COMMAND=$(cat $COMMAND_FILE)
       rm $COMMAND_FILE
@@ -73,25 +74,45 @@ elif [ "$ARG1" == "help" ]; then
   exit
 
 elif [ "$ARG1" == "build" ]; then
-  if [ "$ARG2" == "" ]; then
+  if [ "$ARG2" == "app" ]; then
+    $PROJECT_DIR/src/app/build_app.sh ${@:2}
+  elif [ "$ARG2" == "ui" ]; then
+    $PROJECT_DIR/src/ui/build_ui.sh ${@:2}
+  else
     export LOG_NAME=$TARGET_DIR/logs/build.${DATE_POSTFIX}.log
     # Show the log and save it to target/build.log and target/logs
     ln -sf $LOG_NAME $TARGET_DIR/build.log
     $BIN_DIR/build_all.sh ${@:2} 2>&1 | tee $LOG_NAME
-  elif [ "$ARG2" == "app" ]; then
-    $PROJECT_DIR/src/app/build_app.sh ${@:2}
-  elif [ "$ARG2" == "ui" ]; then
-    $PROJECT_DIR/src/ui/build_ui.sh ${@:2}
+  fi    
+elif [ "$ARG1" == "rm" ]; then
+  if [ "$ARG2" == "build" ]; then 
+    export TF_VAR_infra_as_code="build_resource_manager"
+    $BIN_DIR/terraform_apply.sh 
+  elif [ "$ARG2" == "create" ]; then
+    export TF_VAR_infra_as_code="create_resource_manager"
+    $BIN_DIR/terraform_apply.sh 
+  elif [ "$ARG2" == "" ]; then
+    export TF_VAR_infra_as_code="distribute_resource_manager"
+    $BIN_DIR/terraform_apply.sh 
   else 
     echo "Unknown command: $ARG1 $ARG2"
   fi    
-
-
 elif [ "$ARG1" == "destroy" ]; then
-  LOG_NAME=$TARGET_DIR/logs/destroy.${DATE_POSTFIX}.log
-  # Show the log and save it to target/build.log and target/logs
-  ln -sf $LOG_NAME $TARGET_DIR/destroy.log
-  $BIN_DIR/destroy_all.sh ${@:2} 2>&1 | tee $LOG_NAME
+  if [ -f $TARGET_DIR/resource_manager_stackid ]; then
+    # From the shell that created a RM Stack
+    $BIN_DIR/terraform_destroy.sh 
+  elif [ "$TF_VAR_infra_as_code" == "from_resource_manager" ] && [ "$2" != "--called_by_resource_manager" ]; then
+    # ./starter.sh destroy 
+    # - with terraform stack in resource_manager (=from_resource_manager)
+    # - called from Command Line 
+    # - and not called by the resource_manager
+    $BIN_DIR/terraform_destroy.sh 
+  else 
+    LOG_NAME=$TARGET_DIR/logs/destroy.${DATE_POSTFIX}.log
+    # Show the log and save it to target/build.log and target/logs
+    ln -sf $LOG_NAME $TARGET_DIR/destroy.log
+    $BIN_DIR/destroy_all.sh ${@:2} 2>&1 | tee $LOG_NAME
+  fi
 elif [ "$ARG1" == "ssh" ]; then
   if [ "$ARG2" == "compute" ]; then
     $BIN_DIR/ssh_compute.sh
@@ -102,16 +123,55 @@ elif [ "$ARG1" == "ssh" ]; then
   else 
     echo "Unknown command: $ARG1 $ARG2"
   fi    
+elif [ "$ARG1" == "rebuild" ]; then
+  . $BIN_DIR/shared_bash_function.sh
+
+  # Destroy
+  LOG_NAME=$TARGET_DIR/logs/destroy.${DATE_POSTFIX}.log
+  ln -sf $LOG_NAME $TARGET_DIR/destroy.log
+  $BIN_DIR/destroy_all.sh ${@:2} 2>&1 | tee $LOG_NAME
+  exit_on_error "destroy_all.sh"
+  
+  # Double check
+  if [ -f $TARGET_DIR ]; then
+    error_exit "target dir is still there..."
+  fi
+
+  # Pull
+  git pull
+  exit_on_error "git pull"
+  
+  # Cleanup target dir
+  mkdir -p $TARGET_DIR/logs
+
+  # Build
+  LOG_NAME=$TARGET_DIR/logs/build.${DATE_POSTFIX}.log
+  ln -sf $LOG_NAME $TARGET_DIR/build.log  
+  $BIN_DIR/build_all.sh ${@:2} 2>&1 | tee $LOG_NAME
 elif [ "$ARG1" == "terraform" ]; then
   if [ "$ARG2" == "plan" ]; then
     $BIN_DIR/terraform_plan.sh ${@:3}
   elif [ "$ARG2" == "apply" ]; then
     $BIN_DIR/terraform_apply.sh ${@:3}
   elif [ "$ARG2" == "destroy" ]; then
-    $BIN_DIR/terraform_destroy.sh ${@:3}
+    $BIN_DIR/terraform_destroy.sh ${@:3}  
   else 
     echo "Unknown command: $ARG1 $ARG2"
+  fi 
+
+elif [ "$ARG1" == "frm" ]; then # From Resource Manager
+  . $BIN_DIR/shared_bash_function.sh
+  export CALLED_BY_TERRAFORM="TRUE"      
+
+  if [ "$ARG2" == "before_terraform" ]; then
+    export LOG_NAME=$TARGET_DIR/frm_before_terraform.log
+    $BIN_DIR/build_all.sh --before_terraform | tee $LOG_NAME
+    exit_on_error "build_all.sh --before_terraform"
   fi    
+  . shared_infra_as_code.sh
+  . ./starter.sh env
+  resource_manager_variables_json
+
 elif [ "$ARG1" == "start" ]; then
     $BIN_DIR/start_stop.sh start $ARG1 $ARG2
 elif [ "$ARG1" == "stop" ]; then

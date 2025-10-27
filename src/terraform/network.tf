@@ -11,12 +11,12 @@
 # export TF_VAR_lz_web_subnet_ocid="XXXX"')
 # export TF_VAR_lz_app_subnet_ocid="XXXX"')
 # export TF_VAR_lz_db_subnet_ocid="XXXX"')
-
+#
 # Existing VCN and Subnets
-variable "vcn_ocid" {}
-variable "web_subnet_ocid" {}
-variable "app_subnet_ocid" {}
-variable "db_subnet_ocid" {}
+# variable "vcn_ocid" {}
+# variable "web_subnet_ocid" {}
+# variable "app_subnet_ocid" {}
+# variable "db_subnet_ocid" {}
 
 data "oci_core_vcn" "starter_vcn" {
   vcn_id = var.vcn_ocid
@@ -150,18 +150,6 @@ resource "oci_core_security_list" "starter_security_list" {
     }
   }  
 
-  // XXXXXX 0.0.0.0/0 ??
-  ingress_security_rules {
-    protocol  = "6" // tcp
-    source    = "0.0.0.0/0"
-    stateless = false
-
-    tcp_options {
-      min = 3000
-      max = 3000
-    }
-  }    
-
   // Oracle TNS Listener port
   ingress_security_rules {
     protocol  = "6" // tcp
@@ -193,8 +181,8 @@ resource "oci_core_security_list" "starter_security_list" {
     stateless = false
 
     tcp_options {
-      min = 33306
-      max = 33306
+      min = 33060
+      max = 33060
     }
   }  
 

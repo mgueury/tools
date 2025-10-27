@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # compute_init.sh 
 #
 # Init of a compute
@@ -18,6 +18,9 @@ echo "ARCH=$ARCH"
 # XXXXXX Since OL8, the service does not start if SELINUX=enforcing XXXXXX
 sudo setenforce 0
 sudo sed -i s/^SELINUX=.*$/SELINUX=permissive/ /etc/selinux/config
+
+# Set VI and NANO in utf8
+echo "export LC_CTYPE=en_US.UTF-8" >> $HOME/.bashrc
 
 # -- Shared Install function ------------------------------------------------
 
@@ -39,6 +42,10 @@ install_java() {
       sudo dnf install -y graalvm-21-jdk
       sudo update-alternatives --set java /usr/lib64/graalvm/graalvm-java21/bin/java
       # sudo update-alternatives --set native-image /usr/lib64/graalvm/graalvm-java21/lib/svm/bin/native-image
+    else
+      sudo dnf install -y graalvm-25-jdk
+      sudo update-alternatives --set java /usr/lib64/graalvm/graalvm-java25/bin/java
+      # sudo update-alternatives --set native-image /usr/lib64/graalvm/graalvm-java21/lib/svm/bin/native-image
     fi   
   else
     # JDK 
@@ -50,8 +57,10 @@ install_java() {
       sudo dnf install -y java-11  
     elif [ "$TF_VAR_java_version" == 17 ]; then
       sudo dnf install -y java-17        
+    elif [ "$TF_VAR_java_version" == 21 ]; then
+      sudo dnf install -y java-21         
     else
-      sudo dnf install -y java-21  
+      sudo dnf install -y java-25  
       # Trick to find the path
       # cd -P "/usr/java/latest"
       # export JAVA_LATEST_PATH=`pwd`
@@ -81,41 +90,49 @@ for APP_DIR in `ls -d app* | sort -g`; do
   fi  
 done
 
-# -- app/start.sh -----------------------------------------------------------
+# -- app/start*.sh -----------------------------------------------------------
 for APP_DIR in `ls -d app* | sort -g`; do
-  if [ -f $APP_DIR/start.sh ]; then
-    echo "-- $APP_DIR: Start -----------------------------------------"
+  echo "#!/usr/bin/env bash" > $APP_DIR/restart.sh 
+  chmod +x $APP_DIR/restart.sh  
+  for START_SH in `ls $APP_DIR/start*.sh | sort -g`; do
+    echo "-- $START_SH ---------------------------------------"
+    if [[ "$START_SH" =~ start_(.*).sh ]]; then
+      APP_NAME=$(echo "$START_SH" | sed -E 's/(.*)\/start_([a-zA-Z0-9_]+)\.sh$/\1_\2/')
+    else
+      APP_NAME=${APP_DIR}
+    fi
+    echo "APP_NAME=$APP_NAME"
     # Hardcode the connection to the DB in the start.sh
     if [ "$DB_URL" != "" ]; then
-      sed -i "s!##JDBC_URL##!$JDBC_URL!" $APP_DIR/start.sh 
-      sed -i "s!##DB_URL##!$DB_URL!" $APP_DIR/start.sh 
+      sed -i "s!##JDBC_URL##!$JDBC_URL!" $START_SH 
+      sed -i "s!##DB_URL##!$DB_URL!" $START_SH 
     fi  
-    sed -i "s!##TF_VAR_java_vm##!$TF_VAR_java_vm!" $APP_DIR/start.sh   
-    chmod +x $APP_DIR/start.sh
+    sed -i "s!##TF_VAR_java_vm##!$TF_VAR_java_vm!" $START_SH
+    chmod +x $START_SH
 
     # Create an "app.service" that starts when the machine starts.
-    cat > /tmp/$APP_DIR.service << EOT
+     cat > /tmp/$APP_NAME.service << EOT
 [Unit]
 Description=App
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/home/opc/$APP_DIR/start.sh
+ExecStart=/home/opc/$START_SH
 TimeoutStartSec=0
 User=opc
 
 [Install]
 WantedBy=default.target
 EOT
-
-    sudo cp /tmp/$APP_DIR.service /etc/systemd/system
-    sudo chmod 664 /etc/systemd/system/$APP_DIR.service
+    sudo cp /tmp/$APP_NAME.service /etc/systemd/system
+    sudo chmod 664 /etc/systemd/system/$APP_NAME.service
     sudo systemctl daemon-reload
-    sudo systemctl enable $APP_DIR.service
-    sudo systemctl restart $APP_DIR.service
-  fi
-done  
+    sudo systemctl enable $APP_NAME.service
+    sudo systemctl restart $APP_NAME.service
+    echo "sudo systemctl restart $APP_NAME" >> $APP_DIR/restart.sh 
+  done  
+done 
 
 # -- Helper --------------------------------------------------------------------
 cd $SCRIPT_DIR

@@ -71,7 +71,6 @@ module.exports = {
                         console.log("after connectToServer");
                         await mcpClient.listTools();
                         console.log("after listTools");
-                        requestPayload.chatRequest["mcp"] = f.description;
                     } else {
                         mcpClient.addOdaTool2Cohere( f );
                         console.log("after addOdaTool2Cohere");
@@ -123,6 +122,7 @@ module.exports = {
                 llmPayload.candidates = [{ "content": event.payload.chatResponse.text }];
                 if ( event.payload.chatResponse.toolCalls ) {
                     var t = event.payload.chatResponse.toolCalls[0];
+                    t["text"] = event.payload.chatResponse.text 
                     if ( t.name.startsWith("local_") ) {
                         t.name = t.name.replace( "local_", "" );
                         llmPayload.candidates = [{ "content":  JSON.stringify(t) }];

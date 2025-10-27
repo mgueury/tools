@@ -81,6 +81,8 @@ class MCPClient {
         t.name = "local_" + tool.name; 
         if ( tool.description ) {
           t.description = tool.description; 
+        } else {
+          t.description = tool.name;  
         }
         if ( tool.parameters ) {
           t.parameterDefinitions = tool.parameters;
@@ -108,6 +110,9 @@ class MCPClient {
                 params[key].isRequired = true;
             });
             this.debug("params: " + JSON.stringify(params));
+            if( !tool.description ) {
+                tool.description = tool.name;
+            }
             return {
                 name: tool.name,
                 description: tool.description,

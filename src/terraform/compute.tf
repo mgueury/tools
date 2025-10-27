@@ -1,10 +1,10 @@
    
 resource "oci_core_instance" "starter_compute" {
 
-  availability_domain = data.oci_identity_availability_domain.ad.name
+  availability_domain = local.availability_domain_name
   compartment_id      = local.lz_app_cmp_ocid
   display_name        = "${var.prefix}-compute"
-  shape               = var.instance_shape
+  shape               = local.shape
 
   shape_config {
     ocpus         = var.instance_ocpus
@@ -13,19 +13,18 @@ resource "oci_core_instance" "starter_compute" {
   }
 
   create_vnic_details {
-    subnet_id                 = data.oci_core_subnet.starter_web_subnet.id
-    assign_public_ip          = true
+    subnet_id                 = data.oci_core_subnet.starter_app_subnet.id
+    assign_public_ip          = false
     display_name              = "Primaryvnic"
     assign_private_dns_record = true
     hostname_label            = "${var.prefix}-compute"
   }
 
-  # XXXX Should be there only for Java
   agent_config {
-    plugins_config {
-      desired_state =  "ENABLED"
-      name = "Oracle Java Management Service"
-    }
+    # plugins_config {
+    #   desired_state =  "ENABLED"
+    #   name = "Oracle Java Management Service"
+    # }
     plugins_config {
       desired_state =  "ENABLED"
       name = "Management Agent"
@@ -33,7 +32,7 @@ resource "oci_core_instance" "starter_compute" {
   }
 
   metadata = {
-    ssh_authorized_keys = var.ssh_public_key
+    ssh_authorized_keys = local.ssh_public_key
   }
 
   source_details {
@@ -46,15 +45,16 @@ resource "oci_core_instance" "starter_compute" {
     agent       = false
     host        = oci_core_instance.starter_compute.public_ip
     user        = "opc"
-    private_key = var.ssh_private_key
+    private_key = local.ssh_private_key
   }
 
   lifecycle {
     ignore_changes = [
-      source_details[0].source_id
+      source_details[0].source_id,
+      shape
     ]
   }
-
+  
   freeform_tags = local.freeform_tags
 }
 
@@ -65,9 +65,9 @@ data "oci_core_instance" "starter_compute" {
 locals {
   compute_ocid = data.oci_core_instance.starter_compute.id
   compute_public_ip = data.oci_core_instance.starter_compute.public_ip
-  compute_private_ip = data.oci_core_instance.starter_compute.private_ip
+  local_compute_ip = data.oci_core_instance.starter_compute.private_ip
 }
 
 output "compute_ip" {
-  value = local.compute_private_ip
+  value = local.local_compute_ip
 }
