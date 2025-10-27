@@ -88,7 +88,7 @@ resource "oci_core_subnet" "starter_app_subnet" {
   cidr_block        = local.cidr_app_subnet
   display_name      = "${var.prefix}-app-subnet"
   dns_label         = "${var.prefix}app"
-  security_list_ids = [oci_core_vcn.starter_vcn.default_security_list_id, oci_core_security_list.starter_security_list.id]
+  security_list_ids = [oci_core_vcn.starter_vcn.default_security_list_id, oci_core_security_list.starter_security_list.id,oci_core_security_list.starter_security_list_botsdk.id]
   compartment_id    = local.lz_network_cmp_ocid
   vcn_id            = oci_core_vcn.starter_vcn.id
   route_table_id    = oci_core_route_table.starter_route_private.id
