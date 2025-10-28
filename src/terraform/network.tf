@@ -11,12 +11,12 @@
 # export TF_VAR_lz_web_subnet_ocid="XXXX"')
 # export TF_VAR_lz_app_subnet_ocid="XXXX"')
 # export TF_VAR_lz_db_subnet_ocid="XXXX"')
-#
+
 # Existing VCN and Subnets
-# variable "vcn_ocid" {}
-# variable "web_subnet_ocid" {}
-# variable "app_subnet_ocid" {}
-# variable "db_subnet_ocid" {}
+variable "vcn_ocid" {}
+variable "web_subnet_ocid" {}
+variable "app_subnet_ocid" {}
+variable "db_subnet_ocid" {}
 
 data "oci_core_vcn" "starter_vcn" {
   vcn_id = var.vcn_ocid
@@ -88,7 +88,7 @@ resource "oci_core_subnet" "starter_app_subnet" {
   cidr_block        = local.cidr_app_subnet
   display_name      = "${var.prefix}-app-subnet"
   dns_label         = "${var.prefix}app"
-  security_list_ids = [oci_core_vcn.starter_vcn.default_security_list_id, oci_core_security_list.starter_security_list.id,oci_core_security_list.starter_security_list_botsdk.id]
+  security_list_ids = [oci_core_vcn.starter_vcn.default_security_list_id, oci_core_security_list.starter_security_list.id]
   compartment_id    = local.lz_network_cmp_ocid
   vcn_id            = oci_core_vcn.starter_vcn.id
   route_table_id    = oci_core_route_table.starter_route_private.id
@@ -150,6 +150,18 @@ resource "oci_core_security_list" "starter_security_list" {
     }
   }  
 
+  // XXXXXX 0.0.0.0/0 ??
+  ingress_security_rules {
+    protocol  = "6" // tcp
+    source    = "0.0.0.0/0"
+    stateless = false
+
+    tcp_options {
+      min = 3000
+      max = 3000
+    }
+  }    
+
   // Oracle TNS Listener port
   ingress_security_rules {
     protocol  = "6" // tcp
@@ -181,8 +193,8 @@ resource "oci_core_security_list" "starter_security_list" {
     stateless = false
 
     tcp_options {
-      min = 33060
-      max = 33060
+      min = 33306
+      max = 33306
     }
   }  
 

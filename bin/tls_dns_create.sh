@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 if [ "$PROJECT_DIR" == "" ]; then
   echo "ERROR: PROJECT_DIR undefined. Please use starter.sh"
   exit 1
@@ -7,7 +7,6 @@ cd $PROJECT_DIR
 
 . starter.sh env -silent
 . $BIN_DIR/tls/dns_shared_function.sh
-title "Certificate - Create using DNS01"
 
 # Start OCI Commands in Backgroud waiting from files coming from certbot 
 # (Since Certbot Docker has not OCI CLI access)

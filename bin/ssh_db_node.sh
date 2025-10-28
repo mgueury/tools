@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 if [ "$PROJECT_DIR" == "" ]; then
   echo "ERROR: PROJECT_DIR undefined. Please use starter.sh ssh db_node"
   exit 1

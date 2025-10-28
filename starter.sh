@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # starter.sh proxy. Run the real starter.sh 
 # - in $PROJECT_DIR/bin
