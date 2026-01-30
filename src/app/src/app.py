@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Annotated
 from langchain_tavily import TavilySearch
 import logging
+import time
 
 app = FastAPI()
 logging.basicConfig( format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
@@ -165,6 +166,20 @@ def dept():
         { "deptno": "40", "dname": "OPERATIONS", "loc": "San Francisco"}
     ]  
     return a  
+
+#----------------------------------------------------------------------------
+
+@app.get('/sleep30')
+def sleep60():
+    time.sleep(60)
+    return 'sleep30'  
+
+#----------------------------------------------------------------------------
+
+@app.get('/sleep60')
+def sleep60():
+    time.sleep(60)
+    return 'sleep60' 
 
 #----------------------------------------------------------------------------
 
