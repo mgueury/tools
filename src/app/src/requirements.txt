@@ -1,0 +1,6 @@
+Flask
+flask-cors
+waitress
+uvicorn[standard]   
+fastapi
+langchain_community
